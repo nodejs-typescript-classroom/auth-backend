@@ -17,7 +17,7 @@ pnpm add -S class-validator class-transformer
 ```shell
 pnpm add -S @nestjs/jwt
 ```
-```
+
 
 ## step 1
 
@@ -94,3 +94,27 @@ import * as Joi from 'joi';
 export class AppModule {}
 
 ```
+
+## notice smtp server 部份
+
+這次因為 sendgrid 帳號太久沒使用導致 帳號被 suspend
+
+所改成使用 google 的 smtp server
+
+順便查詢使用建立 google 應用程式密碼的方式
+
+![google_application_key](google_application_key.png)
+
+透過這種方式就可以使用 smtp.google.com 這個 host
+
+port 是 465 協定需要通過 TLS/SSL 加密通道
+
+## 特別要提的點
+
+1. 這次忘記密碼的 token 與 userid 是透過 mongodb 的 storage 去存儲
+
+2. 重設密碼的 token 與 userid 也是透過 mongodb 去儲存
+
+這並且兩都在使用結束後就刪除
+
+其中該思考的點是建立帳戶的流程兩個流程對於 db 的查詢與更新具有相依性，也許該找出可以不依賴於資料庫狀態的作法。
