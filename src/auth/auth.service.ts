@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Injectable,
-  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { SignupDto } from './dtos/signup.dto';
@@ -17,7 +16,6 @@ import { v4 as uuidV4 } from 'uuid';
 import { RefreshTokenDto } from './dtos/refresh-token.dto';
 @Injectable()
 export class AuthService {
-  private logger: Logger = new Logger(AuthService.name);
   constructor(
     @InjectModel(User.name) private UserModel: Model<User>,
     @InjectModel(RefreshToken.name)
@@ -51,7 +49,7 @@ export class AuthService {
       throw new UnauthorizedException('Wrong credentials');
     }
     // Compare entered password with existing password
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    const passwordMatch = bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       throw new UnauthorizedException('Wrong credentials');
     }

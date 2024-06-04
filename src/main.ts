@@ -11,4 +11,6 @@ async function bootstrap() {
   );
   await app.listen(3000);
 }
-bootstrap();
+bootstrap().catch((error) => {
+  console.error(error);
+});
