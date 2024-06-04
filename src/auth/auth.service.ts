@@ -49,7 +49,7 @@ export class AuthService {
       throw new UnauthorizedException('Wrong credentials');
     }
     // Compare entered password with existing password
-    const passwordMatch = bcrypt.compare(password, user.password);
+    const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       throw new UnauthorizedException('Wrong credentials');
     }
