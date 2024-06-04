@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { SignupDto } from './dtos/signup.dto';
@@ -14,14 +16,23 @@ import { ConfigService } from '@nestjs/config';
 import { RefreshToken } from './schemas/refresh-token.schema';
 import { v4 as uuidV4 } from 'uuid';
 import { RefreshTokenDto } from './dtos/refresh-token.dto';
+import { ChangePasswordDto } from './dtos/change-password.dto';
+import { ForgotPasswordDto } from './dtos/forgot-password.dto';
+import { nanoid } from 'nanoid';
+import { ResetToken } from './schemas/reset-token.schema';
+import { MailService } from 'src/services/mail.service';
+import { ResetPasswordDto } from './dtos/reset-password.dto';
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User.name) private UserModel: Model<User>,
     @InjectModel(RefreshToken.name)
     private RefreshTokenModel: Model<RefreshToken>,
+    @InjectModel(ResetToken.name)
+    private ResetTokenModel: Model<ResetToken>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
   ) {}
   async signup(signupData: SignupDto) {
     const { email, password, name } = signupData;
@@ -102,5 +113,70 @@ export class AuthService {
     }
     // Create new accessToken, refreshToken pair
     return await this.generateUserToken(token.userId as unknown as string);
+  }
+
+  async changePassword(userId, changePasswordDto: ChangePasswordDto) {
+    const { oldPassword, newPassword } = changePasswordDto;
+    // find the user
+    const user = await this.UserModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    // compare the old password with the password in DB
+    const passwordMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!passwordMatch) {
+      throw new UnauthorizedException('Wrong credentials');
+    }
+    // Change user's password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const { email } = forgotPasswordDto;
+    // check user exists
+    const user = await this.UserModel.findOne({ email });
+    if (user) {
+      const expiryDate = new Date();
+      expiryDate.setHours(expiryDate.getHours() + 1);
+      // generate reset link for that user
+      const resetToken = nanoid(64);
+      await this.ResetTokenModel.updateOne(
+        {
+          userId: user._id,
+        },
+        {
+          $set: { token: resetToken, expiryDate },
+        },
+        {
+          upsert: true,
+        },
+      );
+      // send the link to the user by email
+      this.mailService.sendPasswordResetEmail(email, resetToken);
+    }
+    return {
+      message: 'If this user exists, they will receive an email',
+    };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const { newPassword, resetToken } = resetPasswordDto;
+    // Find a valid reset token document
+    const token = await this.ResetTokenModel.findOneAndDelete({
+      token: resetToken,
+      expiryDate: { $gte: new Date() },
+    });
+    if (!token) {
+      throw new UnauthorizedException('Invalid link');
+    }
+    // Change user password
+    const user = await this.UserModel.findById(token.userId);
+    if (!user) {
+      throw new InternalServerErrorException();
+    }
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
   }
 }

@@ -13,6 +13,11 @@ import { JwtModule } from '@nestjs/jwt';
       validationSchema: Joi.object({
         MONGO_URI: Joi.string().required(),
         JWT_SECRET: Joi.string().required(),
+        SMTP_SECRET: Joi.string().required(),
+        SMTP_USER: Joi.string().required(),
+        SMTP_HOST: Joi.string().required(),
+        SMTP_PORT: Joi.number().required(),
+        EMAIL_SECURE: Joi.boolean().required(),
       }),
     }),
     MongooseModule.forRootAsync({
