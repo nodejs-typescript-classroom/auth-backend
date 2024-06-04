@@ -12,7 +12,7 @@ pnpm add -S @types/mongoose mongoose
 2. class-validator, class-transformer for data validation
 ```shell
 pnpm add -S class-validator class-transformer
-
+```
 3. @nestjs/jwt
 ```shell
 pnpm add -S @nestjs/jwt
